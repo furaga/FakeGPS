@@ -40,8 +40,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onStop() {
         super.onStop();
-//        mCountDownTimer.cancel();
-//        mLocationManager.removeUpdates(listener);
+        Log.i("", "onStop");
+    }
+
+    void clearLM() {
+        mLocationManager.clearTestProviderLocation(LocationManager.GPS_PROVIDER);
+        mLocationManager.clearTestProviderStatus(LocationManager.GPS_PROVIDER);
+        mLocationManager.clearTestProviderEnabled(LocationManager.GPS_PROVIDER);
+        mLocationManager.removeTestProvider(LocationManager.GPS_PROVIDER);
+        mLocationManager.removeUpdates(listener);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        clearLM();
+        mCountDownTimer.cancel();
+        Log.i("", "onDestroy");
     }
 
     class MyLocationListener implements LocationListener {
@@ -49,10 +64,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         public void onLocationChanged(Location location) {
             if (baseLocation == null) {
                 baseLocation = location;
-                allMockedPositions = new ArrayList<Location>();
-                allMockedPositions.add(createNewLocation(129.837095, 33.800168 ));
-                allMockedPositions.add(createNewLocation(129.836902, 33.799897 ));
-                allMockedPositions.add(createNewLocation(129.836001, 33.799970));
                 startFakingGPS();
             }
 
@@ -83,6 +94,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
 
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
         final boolean gpsEnabled = mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 
         if (!gpsEnabled) {
@@ -126,17 +138,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     int position = 0;
 
     void startFakingGPS() {
-//        allMockedPositions = new ArrayList<Location>();
-        // set in LocationListener
+        allMockedPositions = new ArrayList<Location>();
+        allMockedPositions.add(createNewLocation(126.837095, 30.800168 ));
+        allMockedPositions.add(createNewLocation(129.836902, 32.799897 ));
+        allMockedPositions.add(createNewLocation(132.836001, 35.799970));
 
-        mCountDownTimer = new CountDownTimer(10000, 5000) {
+        mCountDownTimer = new CountDownTimer(5000, 3000) {
             public void onTick(long millisUntilFinished) {
             }
 
             public void onFinish() {
                 if (allMockedPositions.size() > position) {
                     Location mockedLocation = allMockedPositions.get(position++);
-                    mLocationManager.addTestProvider(LocationManager.GPS_PROVIDER, true, true, true, true, true, true, true, 0, 5);
+                    mockedLocation.setTime(System.currentTimeMillis());
+
+                    mLocationManager.addTestProvider(LocationManager.GPS_PROVIDER, false,
+                            false, false , false,
+                            true, true, true, 0, 5);
                     mLocationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true);
                     mLocationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, mockedLocation);
                     mLocationManager.setTestProviderStatus(LocationManager.GPS_PROVIDER, LocationProvider.AVAILABLE, null, System.currentTimeMillis());
@@ -163,8 +181,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Location location = new Location(baseLocation);
         location.setLongitude(longitude);
         location.setLatitude(latitude);
-        location.setTime(System.currentTimeMillis());
-        location.setAccuracy(1.0f);
+        location.setAltitude(0.0f);
+        location.setAccuracy(5.0f);
         return location;
     }
 
