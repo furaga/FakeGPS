@@ -33,23 +33,56 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
 
     private LocationManager mLocationManager;
-
     private CountDownTimer mCountDownTimer;
+
+    LocationListener listener = new MyLocationListener();
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+//        mCountDownTimer.cancel();
+//        mLocationManager.removeUpdates(listener);
+    }
+
+    class MyLocationListener implements LocationListener {
+        @Override
+        public void onLocationChanged(Location location) {
+            if (baseLocation == null) {
+                baseLocation = location;
+                allMockedPositions = new ArrayList<Location>();
+                allMockedPositions.add(createNewLocation(129.837095, 33.800168 ));
+                allMockedPositions.add(createNewLocation(129.836902, 33.799897 ));
+                allMockedPositions.add(createNewLocation(129.836001, 33.799970));
+                startFakingGPS();
+            }
+
+            String msg = "Lat=" + location.getLatitude()
+                    + "\nLng=" + location.getLongitude();
+            Log.d("GPS", msg);
+//                            mLocationManager.removeUpdates(this);
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         final SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
 
-//        mLocationManager = (LocationManager)this.getSystemService(Context.LOCATION_SERVICE);
-
-        // This verification should be done during onStart() because the system calls
-        // this method when the user returns to the activity, which ensures the desired
-        // location provider is enabled each time the activity resumes from the stopped state.
-        mLocationManager =(LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         final boolean gpsEnabled = mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 
         if (!gpsEnabled) {
@@ -64,48 +97,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         int permissionCheck = ContextCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION);
-        if(permissionCheck != PackageManager.PERMISSION_GRANTED) {
+        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     REQUEST_CODE);
         }
 
         try {
+
             mLocationManager.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER, //LocationManager.NETWORK_PROVIDER,
-                    3000, // 通知のための最小時間間隔（ミリ秒）
-                    10, // 通知のための最小距離間隔（メートル）
-                    new LocationListener() {
-                        @Override
-                        public void onLocationChanged(Location location) {
-                            if (baseLocation == null) {
-                                baseLocation = location;
-                                allMockedPositions.add(createNewLocation(32.800168, 129.837095));
-                                allMockedPositions.add(createNewLocation(32.799897, 129.836902));
-                                allMockedPositions.add(createNewLocation(32.799970, 129.836001));
-                                startFakingGPS();
-                            }
-
-                            String msg = "Lat=" + location.getLatitude()
-                                    + "\nLng=" + location.getLongitude();
-                            Log.d("GPS", msg);
-//                            mLocationManager.removeUpdates(this);
-                        }
-
-                        @Override
-                        public void onProviderDisabled(String provider) {
-                        }
-
-                        @Override
-                        public void onProviderEnabled(String provider) {
-                        }
-
-                        @Override
-                        public void onStatusChanged(String provider, int status, Bundle extras) {
-                        }
-                    }
-            );
-        }catch(SecurityException ex) {
+                    0, 0,
+                    listener);
+            mLocationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    0, 0,
+                    listener);
+        } catch (SecurityException ex) {
             Log.e("ERROR", ex.toString());
         }
 
@@ -114,12 +122,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
     }
 
-
     private List<Location> allMockedPositions;
     int position = 0;
 
     void startFakingGPS() {
-        allMockedPositions = new ArrayList<Location>();
+//        allMockedPositions = new ArrayList<Location>();
         // set in LocationListener
 
         mCountDownTimer = new CountDownTimer(10000, 5000) {
@@ -131,8 +138,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     Location mockedLocation = allMockedPositions.get(position++);
                     mLocationManager.addTestProvider(LocationManager.GPS_PROVIDER, true, true, true, true, true, true, true, 0, 5);
                     mLocationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true);
-//                mLocationManager.setTestProviderStatus(LocationManager.GPS_PROVIDER, LocationProvider.AVAILABLE, null,System.currentTimeMillis());
                     mLocationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, mockedLocation);
+                    mLocationManager.setTestProviderStatus(LocationManager.GPS_PROVIDER, LocationProvider.AVAILABLE, null, System.currentTimeMillis());
+
+                    LatLng marker = new LatLng(mockedLocation.getLatitude(), mockedLocation.getLongitude());
+                    mMap.addMarker(new MarkerOptions().position(marker).title("Marker"));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLng(marker));
+
                     String msg = "SetLocation[" + position + "]: (" + mockedLocation.getLatitude()
                             + ", " + mockedLocation.getLongitude() + ")";
                     Log.d("GPS", msg);
